@@ -1,2 +1,4 @@
 # UART-Protocol
-Implementation of a full UART communication system using Verilog, SystemVerilog, and UVM. Includes RTL design, testbench architecture, constrained-random verification, functional coverage, and reusable verification components. Suitable for learning, research, Verification and FPGA-based communication projects.
+Development of a complete UART communication flow, from RTL implementation to advanced verification. The work features structured design in Verilog, layered SystemVerilog test environments, and UVM-based stimulus generation. Emphasis is placed on interface reliability, protocol timing accuracy, and reusable verification infrastructure aimed at system-level learning and FPGA experimentation.
+
+
