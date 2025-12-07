@@ -10,10 +10,10 @@ module uart_top
 )
 (
     input clk, rst,
-    input rx,
+    input tx,
     input [7:0] dintx,
     input newd,
-    output tx,
+    output rx,
     output [7:0] doutrx,
     output donetx,
     output donerx
