@@ -1,112 +1,62 @@
 // Asynchronous FIFO Module
 module ASYNC_FIFO (
-    // Write clock domain
-    input WClk,
-    input WReset,
-    input Write,
+    input WClk, WReset, Write,
     input [7:0] Din,
     output Full,
-    
-    // Read clock domain  
-    input RClk,
-    input RReset,
-    input Read,
+    input RClk, RReset, Read,
     output reg [7:0] Dout,
     output Empty
 );
 
-  // Memory array
   reg [7:0] Mem [15:0];
+  reg [4:0] WPtr = 0, WGray = 0, RGrayS1 = 0, RGrayS2 = 0;
+  reg [4:0] RPtr = 0, RGray = 0, WGrayS1 = 0, WGrayS2 = 0;
   
-  // Write domain signals
-  reg [4:0] Write_Pointer = 0;
-  reg [4:0] Write_Pointer_Gray = 0;
-  reg [4:0] Read_Pointer_Gray_Sync1 = 0;
-  reg [4:0] Read_Pointer_Gray_Sync2 = 0;
-  
-  // Read domain signals
-  reg [4:0] Read_Pointer = 0;
-  reg [4:0] Read_Pointer_Gray = 0;
-  reg [4:0] Write_Pointer_Gray_Sync1 = 0;
-  reg [4:0] Write_Pointer_Gray_Sync2 = 0;
-  
-  // Binary to Gray code conversion
-  function [4:0] bin2gray;
-    input [4:0] binary;
-    begin
-      bin2gray = binary ^ (binary >> 1);
-    end
+  // Binary to Gray
+  function [4:0] b2g;
+    input [4:0] b;
+    b2g = b ^ (b >> 1);
   endfunction
   
-  // Write pointer and Gray code
+  // Write domain
   always @(posedge WClk) begin
-    if (WReset == 1'b1) begin
-      Write_Pointer <= 0;
-      Write_Pointer_Gray <= 0;
-    end
-    else if (Write && !Full) begin
-      Mem[Write_Pointer[3:0]] <= Din;
-      Write_Pointer <= Write_Pointer + 1;
-      Write_Pointer_Gray <= bin2gray(Write_Pointer + 1);
-    end
-  end
-  
-  // Synchronize read pointer to write clock domain
-  always @(posedge WClk) begin
-    if (WReset == 1'b1) begin
-      Read_Pointer_Gray_Sync1 <= 0;
-      Read_Pointer_Gray_Sync2 <= 0;
+    if (WReset) begin
+      WPtr <= 0; WGray <= 0; RGrayS1 <= 0; RGrayS2 <= 0;
     end
     else begin
-      Read_Pointer_Gray_Sync1 <= Read_Pointer_Gray;
-      Read_Pointer_Gray_Sync2 <= Read_Pointer_Gray_Sync1;
+      RGrayS1 <= RGray;
+      RGrayS2 <= RGrayS1;
+      if (Write && !Full) begin
+        Mem[WPtr[3:0]] <= Din;
+        WPtr <= WPtr + 1;
+        WGray <= b2g(WPtr + 1);
+      end
     end
   end
   
-  // Read pointer and Gray code
+  // Read domain
   always @(posedge RClk) begin
-    if (RReset == 1'b1) begin
-      Read_Pointer <= 0;
-      Read_Pointer_Gray <= 0;
-    end
-    else if (Read && !Empty) begin
-      Dout <= Mem[Read_Pointer[3:0]];
-      Read_Pointer <= Read_Pointer + 1;
-      Read_Pointer_Gray <= bin2gray(Read_Pointer + 1);
-    end
-  end
-  
-  // Synchronize write pointer to read clock domain
-  always @(posedge RClk) begin
-    if (RReset == 1'b1) begin
-      Write_Pointer_Gray_Sync1 <= 0;
-      Write_Pointer_Gray_Sync2 <= 0;
+    if (RReset) begin
+      RPtr <= 0; RGray <= 0; WGrayS1 <= 0; WGrayS2 <= 0;
     end
     else begin
-      Write_Pointer_Gray_Sync1 <= Write_Pointer_Gray;
-      Write_Pointer_Gray_Sync2 <= Write_Pointer_Gray_Sync1;
+      WGrayS1 <= WGray;
+      WGrayS2 <= WGrayS1;
+      if (Read && !Empty) begin
+        Dout <= Mem[RPtr[3:0]];
+        RPtr <= RPtr + 1;
+        RGray <= b2g(RPtr + 1);
+      end
     end
   end
   
-  // Full and Empty flags
-  assign Full = (Write_Pointer_Gray == {~Read_Pointer_Gray_Sync2[4:3], 
-                                         Read_Pointer_Gray_Sync2[2:0]});
-  
-  assign Empty = (Read_Pointer_Gray == Write_Pointer_Gray_Sync2);
+  assign Full = (WGray == {~RGrayS2[4:3], RGrayS2[2:0]});
+  assign Empty = (RGray == WGrayS2);
 
 endmodule
 
-//===========================================
-// INTERFACE
-//===========================================
-
+// Interface
 interface ASYNC_FIFO_if;
-  
-  logic WClk, RClk;
-  logic Write, Read;
-  logic Full, Empty;
-  logic [7:0] Data_in;
-  logic [7:0] Data_out;
-  logic WReset, RReset;
-  
+  logic WClk, RClk, Write, Read, Full, Empty, WReset, RReset;
+  logic [7:0] Data_in, Data_out;
 endinterface
